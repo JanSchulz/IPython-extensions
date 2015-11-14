@@ -4,7 +4,7 @@
 # Distributed under the terms of the Modified BSD License.
 from __future__ import division, print_function, absolute_import
 
-__all__ = ["notebook_demo"]
+__all__ = ["demo"]
 
 import inspect
 from textwrap import dedent
@@ -32,7 +32,7 @@ else:
     text_type = unicode
     binary_type = str
 
-def notebook_demo(content, frontend=None):
+def demo(content, frontend=None):
     """Run a demo or view all available demos.
     Parameters
     ----------
@@ -46,11 +46,18 @@ def notebook_demo(content, frontend=None):
     """
     if frontend is None:
         frontend = NotebookFrontend()
+    elif frontend == "ipython":
+        frontend = IPythonFrontend()
 
-    if isinstance(content, string_types):
-        backend = GithubURLBackend()
-    else:
-        backend = PythonCodeBackend()
+    if content == "STOP":
+        frontend.abbort()
+        return
+
+    backend = None
+    for be in [GithubURLBackend, PythonCodeBackend]:
+        cand = be()
+        if cand.can_handle(content):
+            backend = cand
     try:
         type, content = backend.get(content)
     except Exception as e:
@@ -127,7 +134,7 @@ _URLS_GITHUBURLBACKEND = {
                   '/examples/{0}'
 }
 
-_RE_GITHUBURLBACKEND = re.compile(r"^<gh_(.*)>/.*")
+_RE_GITHUBURLBACKEND = re.compile(r"^<gh_.*>.*")
 class GithubURLBackend(Backend):
 
     def can_handle(self, content):
@@ -139,6 +146,9 @@ class GithubURLBackend(Backend):
     def get(self, content):
         import requests
         typ = "cells" if content.endswith(".py") else "toc"
+        # add a trailing slash
+        if content[-1:] != "/":
+            content = content + "/"
         name = content
         content = content.split("/")
         # get the base source for the demo, which is the first element minus the <gh_.*> stuff
@@ -166,9 +176,9 @@ class GithubURLBackend(Backend):
             #print(ret)
             files = [item for item in ret if item['type'] == 'file']
             dirs = [item for item in ret if item['type'] == 'dir']
-            demo_names = [name+"/"+item["name"] for item in files]
+            demo_names = [name+item["name"] for item in files]
             demos = [(name, "") for name in demo_names if name.endswith(".py")]
-            dir_names = [name+"/"+item["name"] for item in dirs]
+            dir_names = [name+item["name"] for item in dirs]
             more_demos = [(name, "[directory}") for name in dir_names]
             return typ, (name, demos + more_demos)
         raise Exception("This should not happen...")
@@ -181,6 +191,10 @@ class Frontend(object):
 
     def _build(self, cells):
         """Builds the to be published content from the cells"""
+        raise NotImplementedError
+
+    def abbort(self):
+        """Stops a already running demo, if not already published in full"""
         raise NotImplementedError
 
     def insert_demo(self, cells):
@@ -198,11 +212,91 @@ class Frontend(object):
         print(msg.format(name, "\n".join(demos) ))
 
 
+class IPythonFrontend(Frontend):
+
+    # This is ententional a class atribute to also work as a sentinel if another demo is already
+    # running
+    _buffer = []
+
+    def __init__(self):
+        if self._buffer:
+            raise Exception("Already in a running demo, abort with 'demo(\"STOP\")'")
+        try:
+            self.ip = get_ipython()
+            self._orig_run_cell = self.ip.run_cell
+        except:
+            raise Exception("Not running in a IPython environment")
+
+    def abbort(self):
+        """Stops a already running demo, if not already published in full"""
+        if not self._buffer:
+            print("Not in a demo, nothing to stop!")
+            return
+        while self._buffer:
+            self._buffer.pop(0)
+        # deinstall the wrapper
+        self.ip.run_cell = self._orig_run_cell
+        print("Demo stopped!")
+
+    def _publish(self):
+        """Publishes the content of the demo to the frontend"""
+        that = self
+        def run_cell_wrapper(*args, **kwargs):
+            if not that._buffer:
+                # Failsave if the wrapper wasn't deinstalled
+                that.ip.run_cell = that._orig_run_cell
+            # run current code
+            that._orig_run_cell(*args, **kwargs)
+            # set next input to the next code in buffer
+            if that._buffer:
+                code = that._buffer.pop(0)
+                that.ip.set_next_input(code, replace=False)
+            else:
+                # deinstall the wrapper if the buffer is empty
+                that.ip.run_cell = that._orig_run_cell
+
+
+        self.ip.run_cell = run_cell_wrapper
+        code = self._buffer.pop(0)
+        self.ip.set_next_input(code, replace=False)
+
+
+    def _build(self, cells):
+        """In this case just fills a buffer"""
+        md_buffer = None
+        for cell in cells:
+            source = cell['source'].strip()
+            if cell['cell_type'] == 'markdown':
+                lines = source.split("\n")
+                lines = ["# " + line for line in lines]
+                #lines.append("pass # do not remove") # to make even comment only cells to run
+                # something
+                commented = "\n".join(lines)
+                md_buffer = commented
+            elif cell['cell_type'] == 'code':
+                if md_buffer is not None:
+                    # cell magics need to be at the start of a cell
+                    if source[0:2] == "%%":
+                        self._buffer.append(md_buffer)
+                    else:
+                        source = md_buffer + "\n" + source
+                    md_buffer = None
+                self._buffer.append(source)
+        if md_buffer is not None:
+            self._buffer.append(md_buffer)
+
+
+
+
 # Adapted from https://github.com/jupyter-incubator/contentmanagement/blob/master/urth/cms/inject.py
 class NotebookFrontend(Frontend):
 
     def __init__(self):
         self._js = []
+
+    def abbort(self):
+        """Stops a already running demo, if not already published in full"""
+        print("Full demo already visible, please just delete all cells")
 
     def _publish(self):
         """Publishes the content of the demo to the frontend"""

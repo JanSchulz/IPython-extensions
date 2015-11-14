@@ -7,7 +7,7 @@ from __future__ import absolute_import
 import nose.tools as nt
 from IPython.testing import tools as tt
 
-from ipyext.demo import notebook_demo, Frontend, GithubURLBackend
+from ipyext.demo import demo, Frontend, GithubURLBackend
 import ipyext.demo
 
 class TestFrontent(Frontend):
@@ -37,19 +37,19 @@ def test_github_backend():
     # no full test of teh content as I don't want to rely on github and matplotlib for this...
 
     with tt.AssertPrints("Unknown github demo source"):
-        notebook_demo("<gh_not_xxx_existing>")
+        demo("<gh_not_xxx_existing>")
 
 
 def test_python_backend():
 
     with tt.AssertPrints("has no demos available."):
-        notebook_demo(nt)
+        demo(nt)
 
     with tt.AssertPrints("has the following demo(s) available:"):
-        notebook_demo(ipyext.demo)
+        demo(ipyext.demo)
 
     with tt.AssertPrints("demo_example"):
-        notebook_demo(ipyext.demo)
+        demo(ipyext.demo)
 
     exp = [
         "markdown",
@@ -85,7 +85,7 @@ def test_python_backend():
         ]
 
     fe = TestFrontent(exp)
-    notebook_demo(ipyext.demo.demo_example, frontend=fe)
+    demo(ipyext.demo.demo_example, frontend=fe)
 
 if __name__ == '__main__':
     import nose
