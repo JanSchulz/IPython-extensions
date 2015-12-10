@@ -13,6 +13,8 @@ Demo mode
     import ipyext.demo
     demo(ipyext.demo)
     demo("<gh_matplotlib>/statistics/")
+    # stops an already running demo
+    demo("STOP")
 
 
 .. autosummary::

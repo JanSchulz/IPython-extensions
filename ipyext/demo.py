@@ -7,9 +7,12 @@ from __future__ import division, print_function, absolute_import
 __all__ = ["demo"]
 
 import inspect
-from textwrap import dedent
+from textwrap import dedent, wrap
 import re
 import sys
+
+def w(txt):
+    return "\n".join(wrap(txt))
 
 try:
     #py3
@@ -277,32 +280,26 @@ class IPythonFrontend(Frontend):
             return
         while self._buffer:
             self._buffer.pop(0)
-        # deinstall the wrapper
-        self.ip.run_cell = self._orig_run_cell
+        # deinstall the event handler
+        self.ip.events.unregister("post_run_cell", self._post_run_cell)
         print("Demo stopped!")
+
+    def _post_run_cell(self):
+        if not self._buffer:
+            # failsave...
+            self.ip.events.unregister("post_run_cell", self._post_run_cell)
+            return
+        code = self._buffer.pop(0)
+        self.ip.set_next_input(code, replace=False)
+        if not self._buffer:
+            self.ip.events.unregister("post_run_cell", self._post_run_cell)
+            return
 
     def _publish(self):
         """Publishes the content of the demo to the frontend"""
-        that = self
-        def run_cell_wrapper(*args, **kwargs):
-            if not that._buffer:
-                # Failsave if the wrapper wasn't deinstalled
-                that.ip.run_cell = that._orig_run_cell
-            # run current code
-            that._orig_run_cell(*args, **kwargs)
-            # set next input to the next code in buffer
-            if that._buffer:
-                code = that._buffer.pop(0)
-                that.ip.set_next_input(code, replace=False)
-            else:
-                # deinstall the wrapper if the buffer is empty
-                that.ip.run_cell = that._orig_run_cell
-
-
-        self.ip.run_cell = run_cell_wrapper
-        code = self._buffer.pop(0)
-        self.ip.set_next_input(code, replace=False)
-
+        self.ip.events.register("post_run_cell", self._post_run_cell)
+        msg = "Starting demo... To abbort, remove the demo content and execute \"demo('STOP')\"."
+        print(w(msg))
 
     def _build(self, cells):
         """In this case just fills a buffer"""
