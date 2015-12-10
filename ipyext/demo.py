@@ -10,6 +10,8 @@ import inspect
 from textwrap import dedent, wrap
 import re
 import sys
+import os
+
 
 def w(txt):
     return "\n".join(wrap(txt))
@@ -88,6 +90,9 @@ def demo(content, frontend=None):
     # use a singleton to make stopping demos possible...
     if frontend is None:
         frontend = nb_frontend
+        # special case for Sphinx, to show the stuff...
+        if "SPHINXBUILD" in os.environ:
+            frontend = PrintFrontend()
     elif frontend == "ipython":
         frontend = ipy_frontend
     elif frontend == "notebook":
@@ -286,8 +291,12 @@ class IPythonFrontend(Frontend):
 
     def __init__(self):
         self._buffer = []
+
+
+    @property
+    def ip(self):
         try:
-            self.ip = get_ipython()
+            return get_ipython()
         except:
             raise Exception("Not running in an IPython environment")
 
@@ -393,6 +402,49 @@ class NotebookFrontend(Frontend):
                 i += 1
 
         js.append('var self = this; setTimeout(function() { self.clear_output(); }, 0);')
+
+
+class PrintFrontend(Frontend):
+
+    def __init__(self):
+        self.buffer = []
+
+    def _publish(self):
+        """Publishes the content of the demo to the frontend"""
+        md_buffer = None
+        printouts = []
+        for cell in self.buffer:
+            source = cell['source'].strip()
+            if cell['cell_type'] == 'markdown':
+                lines = source.split("\n")
+                lines = ["# " + line for line in lines]
+                #lines.append("pass # do not remove") # to make even comment only cells to run
+                # something
+                commented = "\n".join(lines)
+                md_buffer = commented
+            elif cell['cell_type'] == 'code':
+                if md_buffer is not None:
+                    # cell magics need to be at the start of a cell
+                    if source[0:2] == "%%":
+                        printouts.append(md_buffer)
+                    else:
+                        source = md_buffer + "\n" + source
+                    md_buffer = None
+                printouts.append(source)
+        if md_buffer is not None:
+            printouts.append(md_buffer)
+        print("\n--- new demo step ---\n".join(printouts))
+
+
+    def _build(self, cells):
+        """Builds the to be published content from the cells"""
+        self.buffer.extend(cells)
+
+    def is_running(self):
+        if self.buffer:
+            return True
+        return False
+
 
 nb_frontend = NotebookFrontend()
 ipy_frontend = IPythonFrontend()
