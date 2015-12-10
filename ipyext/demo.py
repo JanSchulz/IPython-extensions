@@ -85,13 +85,18 @@ def demo(content, frontend=None):
 
 
     """
+    # use a singleton to make stopping demos possible...
     if frontend is None:
-        frontend = NotebookFrontend()
+        frontend = nb_frontend
     elif frontend == "ipython":
-        frontend = IPythonFrontend()
+        frontend = ipy_frontend
 
     if content == "STOP":
-        frontend.abbort()
+        for frontend in (nb_frontend, ipy_frontend):
+            if frontend.is_running():
+                frontend.abbort()
+                return
+        print("No demo running... Nothing to do.")
         return
 
     backend = None
@@ -238,11 +243,18 @@ class Frontend(object):
         """Builds the to be published content from the cells"""
         raise NotImplementedError
 
+    def is_running(self):
+        """Is the frontend currently running a demo?"""
+        raise NotImplementedError
+
+
     def abbort(self):
         """Stops a already running demo, if not already published in full"""
         raise NotImplementedError
 
     def insert_demo(self, cells):
+        if self.is_running():
+            raise Exception("Already in a running demo, abort with 'demo(\"STOP\")'")
         self._build(cells)
         self._publish()
 
@@ -262,16 +274,20 @@ class IPythonFrontend(Frontend):
 
     # This is ententional a class atribute to also work as a sentinel if another demo is already
     # running
-    _buffer = []
 
     def __init__(self):
-        if self._buffer:
-            raise Exception("Already in a running demo, abort with 'demo(\"STOP\")'")
+        self._buffer = []
         try:
             self.ip = get_ipython()
             self._orig_run_cell = self.ip.run_cell
         except:
             raise Exception("Not running in a IPython environment")
+
+    def is_running(self):
+        """Is the frontend currently running a demo?"""
+        if self._buffer:
+            return True
+        return False
 
     def abbort(self):
         """Stops a already running demo, if not already published in full"""
@@ -326,13 +342,16 @@ class IPythonFrontend(Frontend):
             self._buffer.append(md_buffer)
 
 
-
-
 # Adapted from https://github.com/jupyter-incubator/contentmanagement/blob/master/urth/cms/inject.py
 class NotebookFrontend(Frontend):
 
     def __init__(self):
         self._js = []
+
+    def is_running(self):
+        """Is the frontend currently running a demo?"""
+        # notebook publish all in one go, so never ...
+        return False
 
     def abbort(self):
         """Stops a already running demo, if not already published in full"""
@@ -366,6 +385,9 @@ class NotebookFrontend(Frontend):
                 i += 1
 
         js.append('var self = this; setTimeout(function() { self.clear_output(); }, 0);')
+
+nb_frontend = NotebookFrontend()
+ipy_frontend = IPythonFrontend()
 
 ###################################################################################################
 #
