@@ -18,6 +18,7 @@ Contents
 
    install
    magics
+   demo_mode
    whatsnew
 
 .. seealso::

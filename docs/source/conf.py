@@ -39,6 +39,9 @@ if ON_RTD:
 # absolute, like shown here.
 sys.path.insert(0, os.path.abspath('../sphinxext'))
 
+# put the package itself into the path so we can run the build without installing
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
+
 # We load the ipython release info into a dict by explicit execution
 ipextrelease = {}
 exec(compile(open('../../ipyext/_version.py').read(), '../../ipyext/_version.py', 'exec'),ipextrelease)
@@ -69,6 +72,8 @@ if ON_RTD:
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
+
+autosummary_generate = True
 
 # The suffix of source filenames.
 source_suffix = '.rst'

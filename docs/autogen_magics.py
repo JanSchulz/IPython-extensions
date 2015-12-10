@@ -1,4 +1,5 @@
 import os
+import sys
 
 from IPython.core.alias import Alias
 from IPython.core.interactiveshell import InteractiveShell
@@ -15,6 +16,9 @@ for name, func in magics['line'].items():
     ipy_magics.append(name)
 for name, func in magics['cell'].items():
     ipy_magics.append(name)
+
+# put the package itself into the path so we can run the build without installing
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from ipyext import all_class_magics
 shell.register_magics(*all_class_magics)
