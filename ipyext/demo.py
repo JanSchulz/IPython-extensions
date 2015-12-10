@@ -227,9 +227,9 @@ class GithubURLBackend(Backend):
             files = [item for item in ret if item['type'] == 'file']
             dirs = [item for item in ret if item['type'] == 'dir']
             demo_names = [name+item["name"] for item in files]
-            demos = [(name, "") for name in demo_names if name.endswith(".py")]
+            demos = [(dname, "") for dname in demo_names if dname.endswith(".py")]
             dir_names = [name+item["name"] for item in dirs]
-            more_demos = [(name, "[directory}") for name in dir_names]
+            more_demos = [(dir_name, "[directory}") for dir_name in dir_names]
             return typ, (name, demos + more_demos)
         raise Exception("This should not happen...")
 
