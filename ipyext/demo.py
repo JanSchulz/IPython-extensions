@@ -34,14 +34,52 @@ else:
 
 def demo(content, frontend=None):
     """Run a demo or view all available demos.
+
     Parameters
     ----------
     content : whatever content should be displayed as a demo source
-        Examples include a passed in function or module or a path on github in the form
-        ``"<gh_project>/path/to/demo.py"`` (where project is a known project which provides demos
-        on github)
+        Examples include a passed in function or module or a path on github
+        in the form ``"<gh_project>/path/to/demo.py"`` (where project is a
+        known project which provides demos on github)
     frontend : Frontend instace (optional, default is NotebookFrontend)
-        A frontend, which should display the demo (currently only used for testing purpose)
+        A frontend, which should display the demo (currently only used for
+        testing purpose)
+
+    Examples
+    --------
+    Run the demo of the demo:
+
+    >>> from ipyext.demo import demo; import ipyext.demo
+    >>> demo(ipyext.demo)
+    "ipyext.demo" has the following demo(s) available:
+    * demo_example: An example how to write a demo.
+
+    >>> # ipython is for teh console, for notebook simply omit
+    >>> demo(ipyext.demo.demo_example, frontend="ipython")
+    [... demo code appears as input -> just press enter to execute ...]
+
+    The following will load a demo from the matplotlib repository and
+    output it in new cells in a jupyter notebook:
+
+    >>> demo("<gh_matplotlib>/statistics/")
+    "<gh_matplotlib>/statistics/violinplot_demo.py" has the following demo(s) available:
+    * <gh_matplotlib>/statistics/boxplot_color_demo.py:
+    * <gh_matplotlib>/statistics/boxplot_demo.py:
+    * <gh_matplotlib>/statistics/boxplot_vs_violin_demo.py:
+    * <gh_matplotlib>/statistics/bxp_demo.py:
+    * <gh_matplotlib>/statistics/errorbar_demo.py:
+    * <gh_matplotlib>/statistics/errorbar_demo_features.py:
+    * <gh_matplotlib>/statistics/errorbar_limits.py:
+    * <gh_matplotlib>/statistics/histogram_demo_cumulative.py:
+    * <gh_matplotlib>/statistics/histogram_demo_features.py:
+    * <gh_matplotlib>/statistics/histogram_demo_histtypes.py:
+    * <gh_matplotlib>/statistics/histogram_demo_multihist.py:
+    * <gh_matplotlib>/statistics/multiple_histograms_side_by_side.py:
+    * <gh_matplotlib>/statistics/violinplot_demo.py:
+
+    >>> demo("<gh_matplotlib>/statistics/histogram_demo_features.py")
+    [... demo code appears as new notebook cells which can be executed...]
+
 
     """
     if frontend is None:
@@ -208,7 +246,8 @@ class Frontend(object):
         {1}
         """
         msg = dedent(msg)
-        demos = ["* {0}: {1}".format(d[0], d[1]) for d in toc]
+        t_w, t_wo = "* {0}: {1}", "* {0}"
+        demos = [(t_w.format(d[0], d[1]) if d[1] else t_wo.format(d[0])) for d in toc]
         print(msg.format(name, "\n".join(demos) ))
 
 
@@ -341,7 +380,7 @@ def _function_source_to_cells(source):
     # remove the function declaration and the docstring
     lines = lines[2:]
     source = "\n".join(lines)
-    # remove whitespace as needed ans split again...
+    # remove whitespace as needed and split again...
     source = dedent(source)
 
     lines = source.split("\n")
@@ -375,18 +414,20 @@ def _function_source_to_cells(source):
 #
 ###################################################################################################
 
+
 def demo_example():
     """An example how to write a demo."""
     # ## Comments
-    # Comments are interpreted as markdown syntax, removing the initial `# `.
-    # If a comment starts only as `#` it is interpreted as a comment, which will
-    # end up together with the code.
+    # Comments are interpreted as markdown syntax, removing the
+    # initial `# `. If a comment starts only with `#`, it is interpreted
+    # as a code comment, which will end up together with the code.
     #change your name:
     name = "Jan"
     print("Hello {0}!".format(name))
     # ## Magics
-    # Using magics would result in not compiling code, so magics have to be commented out.
-    # The demo will remove the comment and insert it into the cell as code.
+    # Using magics would result in not compiling code, so magics
+    # have to be commented out. The demo will remove the comment
+    # and insert it into the cell as code.
     #%%time
     _sum = 0
     for x in range(10000):
@@ -394,4 +435,7 @@ def demo_example():
     # Print the sum:
     print(_sum)
 
+# This lets the `demo(ipyext.demo)` find only the `demo_example`.
+# Only modues with that variable will display an overview of
+# the available demos.
 __demos__ = [demo_example]
