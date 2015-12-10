@@ -59,10 +59,7 @@ dist: html
 	cp -al build/html .
 	@echo "Build finished.  Final docs are in html/"
 
-html: api autoconfig automagic
-html_noapi: clean_api autoconfig automagic
-
-html html_noapi:
+html html_noapi: automagic
 	mkdir -p build/html build/doctrees
 	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) build/html
 	@echo
@@ -73,18 +70,6 @@ automagic: source/interactive/magics-generated.txt
 source/interactive/magics-generated.txt: autogen_magics.py
 	python autogen_magics.py
 	@echo "Created docs for line & cell magics"
-
-autoconfig: source/config/options/generated
-
-source/config/options/generated:
-	python autogen_config.py
-	@echo "Created docs for config options"
-
-api: source/api/generated/gen.txt
-
-source/api/generated/gen.txt:
-	python autogen_api.py
-	@echo "Build API docs finished."
 
 pickle:
 	mkdir -p build/pickle build/doctrees
