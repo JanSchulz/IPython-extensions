@@ -208,6 +208,10 @@ class GithubURLBackend(Backend):
             content = decodebytes(content.encode())
             content = content.decode()
             # Todo: split into cells?
+            # splitting must depend on the frontend :-(
+            # in the notebook, splititng matplotlib stuff results in multiple plots
+            # (also the plot.show() call shoudld be in teh same cell). It would be ok
+            # for the console...
             return typ, [{"source": content, "cell_type":"code"}]
         elif typ == "toc":
             #ret = ret[0]
@@ -372,15 +376,21 @@ class NotebookFrontend(Frontend):
 #
 ###################################################################################################
 
-_RE_MAGICS = re.compile(r"^#%")
-_RE_MD = re.compile(r"^# ")
-
 def _function_source_to_cells(source):
+    # This assumes that function declaration is on one line and
+    # the docstring is also only one line
+    # TODO: parse that properly...
     lines = source.split("\n")
     # remove the function declaration and the docstring
     lines = lines[2:]
     source = "\n".join(lines)
-    # remove whitespace as needed and split again...
+    return _flat_source_to_cells(source)
+
+_RE_MAGICS = re.compile(r"^#%")
+_RE_MD = re.compile(r"^# ")
+
+def _flat_source_to_cells(source):
+    # remove whitespace as needed and split ...
     source = dedent(source)
 
     lines = source.split("\n")
