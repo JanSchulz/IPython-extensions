@@ -5,6 +5,8 @@
 from __future__ import absolute_import
 
 import nose.tools as nt
+import mock
+
 from IPython.testing import tools as tt
 
 from ipyext.demo import demo, Frontend, GithubURLBackend
@@ -27,6 +29,12 @@ class TestFrontent(Frontend):
             self.buffer.append(cell['cell_type'])
             self.buffer.append(cell['source'])
 
+    def is_running(self):
+        if self.buffer:
+            return True
+        return False
+
+
 def test_github_backend():
     # this only works if we have access to the internet...
     backend = GithubURLBackend()
@@ -34,7 +42,7 @@ def test_github_backend():
     nt.assert_equal(typ, "toc")
     typ, content = backend.get("<gh_matplotlib>/style_sheets/plot_grayscale.py")
     nt.assert_equal(typ, "cells")
-    # no full test of teh content as I don't want to rely on github and matplotlib for this...
+    # no full test of the content as I don't want to rely on github and matplotlib for this...
 
     with tt.AssertPrints("Unknown github demo source"):
         demo("<gh_not_xxx_existing>")
@@ -55,9 +63,9 @@ def test_python_backend():
         "markdown",
         "\n".join([
             "## Comments",
-            "Comments are interpreted as markdown syntax, removing the initial `# `.",
-            "If a comment starts only as `#` it is interpreted as a comment, which will",
-            "end up together with the code."
+            "Comments are interpreted as markdown syntax, removing the",
+            "initial `# `. If a comment starts only with `#`, it is interpreted",
+            "as a code comment, which will end up together with the code."
             ]),
         "code",
         "\n".join([
@@ -68,8 +76,9 @@ def test_python_backend():
         "markdown",
         "\n".join([
             "## Magics",
-            "Using magics would result in not compiling code, so magics have to be commented out.",
-            "The demo will remove the comment and insert it into the cell as code."
+            "Using magics would result in not compiling code, so magics",
+            "have to be commented out. The demo will remove the comment",
+            "and insert it into the cell as code."
             ]),
         "code",
         "\n".join([
@@ -85,7 +94,49 @@ def test_python_backend():
         ]
 
     fe = TestFrontent(exp)
+
     demo(ipyext.demo.demo_example, frontend=fe)
+
+
+def test_wrong_frontend():
+    with tt.AssertPrints("Not a valid frontend"):
+        demo(nt, frontend="Not_Existing")
+
+
+@mock.patch('IPython.display.display')
+def test_notebook_frontend(mock_display):
+    from IPython.core.display import Javascript
+    ip = get_ipython()
+    ip.run_cell("from ipyext.demo import demo\nimport ipyext.demo")
+    ip.run_cell("demo(ipyext.demo.demo_example)")
+    nt.assert_true(mock_display.called)
+    nt.assert_equal(mock_display.call_count, 1)
+    # call_args = ((Javascript(...),),)
+    nt.assert_is_instance(mock_display.call_args[0][0], Javascript)
+    nt.assert_true("insert_cell_below" in mock_display.call_args[0][0]._repr_javascript_())
+    with tt.AssertPrints("No demo running... Nothing to do."):
+        ip.run_cell("demo('STOP')")
+
+
+@mock.patch('IPython.core.interactiveshell.InteractiveShell.set_next_input')
+def test_ipython_frontend(mock_set_next_input):
+    from IPython.core.display import Javascript
+    ip = get_ipython()
+    ip.run_cell("from ipyext.demo import demo\nimport ipyext.demo")
+    with tt.AssertPrints("Starting demo..."):
+        ip.run_cell("demo(ipyext.demo.demo_example, frontend='ipython')")
+    nt.assert_true("IPythonFrontend._post_run_cell" in repr(ip.events.callbacks["post_run_cell"]))
+    print(mock_set_next_input.call_args)
+    nt.assert_true(mock_set_next_input.called)
+    nt.assert_equal(mock_set_next_input.call_count, 1)
+    # call_args = (("<firstcell...>,),replace=False)
+    nt.assert_true("Comments are interpreted as markdown syntax" in mock_set_next_input.call_args[0][0])
+    ip.run_cell("pass")
+    nt.assert_true("Using magics would result" in mock_set_next_input.call_args[0][0])
+    with tt.AssertPrints("Demo stopped!"):
+        ip.run_cell("demo('STOP')")
+    nt.assert_false("IPythonFrontend._post_run_cell" in repr(ip.events.callbacks["post_run_cell"]))
+
 
 if __name__ == '__main__':
     import nose

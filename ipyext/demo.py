@@ -90,6 +90,14 @@ def demo(content, frontend=None):
         frontend = nb_frontend
     elif frontend == "ipython":
         frontend = ipy_frontend
+    elif frontend == "notebook":
+        frontend = nb_frontend
+    elif isinstance(frontend, Frontend):
+        # just use it...
+        pass
+    else:
+        print("Not a valid frontend: {}".format(frontend))
+        return
 
     if content == "STOP":
         for frontend in (nb_frontend, ipy_frontend):
@@ -107,7 +115,8 @@ def demo(content, frontend=None):
     try:
         type, content = backend.get(content)
     except Exception as e:
-        print(e.args)
+        print("Can't get the demo code:")
+        print("; ".join(e.args))
         return
 
     if type == "toc":
@@ -210,7 +219,7 @@ class GithubURLBackend(Backend):
         ret = r.json()
         # unauthenticated requests have a ratelimit...
         if 'message' in ret:
-            raise Exception(ret['message'])
+            raise Exception("Github: " + ret['message'])
         if typ == "cells":
             content = ret["content"]
             content = decodebytes(content.encode())
@@ -218,7 +227,7 @@ class GithubURLBackend(Backend):
             # Todo: split into cells?
             # splitting must depend on the frontend :-(
             # in the notebook, splititng matplotlib stuff results in multiple plots
-            # (also the plot.show() call shoudld be in teh same cell). It would be ok
+            # (also the plot.show() call shoudld be in the same cell). It would be ok
             # for the console...
             return typ, [{"source": content, "cell_type":"code"}]
         elif typ == "toc":
@@ -279,9 +288,8 @@ class IPythonFrontend(Frontend):
         self._buffer = []
         try:
             self.ip = get_ipython()
-            self._orig_run_cell = self.ip.run_cell
         except:
-            raise Exception("Not running in a IPython environment")
+            raise Exception("Not running in an IPython environment")
 
     def is_running(self):
         """Is the frontend currently running a demo?"""

@@ -7,7 +7,7 @@ python:
     - 2.7
 sudo: false
 install:
-    - travis_retry pip install ipython nose requests
+    - travis_retry pip install ipython nose requests mock
     - python setup.py develop
 script:
     - python test.py
