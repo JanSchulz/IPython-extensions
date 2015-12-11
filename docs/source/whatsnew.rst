@@ -2,11 +2,17 @@
 What's new in IPython-extensions
 ================================
 
-This section documents the changes that have been made in various 
-versions of IPython-extensions. Users should consult these pages to 
-learn about new features, bug fixes and backwards incompatibilities. 
-Developers should summarize the development work they do here in a user 
-friendly format. 
+This section documents the changes that have been made in various
+versions of IPython-extensions. Users should consult these pages to
+learn about new features, bug fixes and backwards incompatibilities.
+Developers should summarize the development work they do here in a user
+friendly format.
+
+Dev 0.2.0 (current development)
+===============================
+
+* New ``demo()`` command
+
 
 Release 0.1.0
 =============
