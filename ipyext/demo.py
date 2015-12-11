@@ -156,9 +156,10 @@ class Backend(object):
         Returns
         -------
         (type, content) : the type and real content for this content
-            ``type`` is one of "toc" or "cells". ``content`` is a list of tuples ``(name,
-            description)`` which should be displayed as available demos (if ``type=="toc"``) or
-            a a list of ``cells`` which should be displayed.
+            ``type`` is one of "toc" or "cells". ``content`` is a list of
+            tuples ``(name, description)`` which should be displayed as
+            available demos (if ``type=="toc"``) or a a list of ``cells`` which
+            should be displayed.
         """
         raise NotImplementedError
 
@@ -191,6 +192,8 @@ class PythonCodeBackend(Backend):
 
 _URLS_GITHUBURLBACKEND = {
     "matplotlib": 'https://api.github.com/repos/matplotlib/matplotlib/contents'
+                  '/examples/{0}',
+    "seaborn":    'https://api.github.com/repos/mwaskom/seaborn/contents'
                   '/examples/{0}'
 }
 
