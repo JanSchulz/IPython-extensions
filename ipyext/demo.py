@@ -59,7 +59,7 @@ def demo(content, frontend=None):
     "ipyext.demo" has the following demo(s) available:
     * demo_example: An example how to write a demo.
 
-    >>> # ipython is for teh console, for notebook simply omit
+    >>> # ipython is for the console, for notebook simply omit
     >>> demo(ipyext.demo.demo_example, frontend="ipython")
     [... demo code appears as input -> just press enter to execute ...]
 
@@ -380,12 +380,16 @@ class NotebookFrontend(Frontend):
     def _publish(self):
         """Publishes the content of the demo to the frontend"""
         from IPython.display import display, Javascript
-        display(Javascript("\n".join(self._js)))
+        class JavascriptWithFallback(Javascript):
+            def __repr__(self):
+                return ("Your frontend seems to be something else than the notebook. "
+                        "Please start the demo with 'demo(..., frontend=\"ipython\")'.")
+        display(JavascriptWithFallback("\n".join(self._js)))
 
     def _build(self, cells):
         '''
         Creates a series of JS commands to inject code and markdown cells from
-        the passed notebook structure into the existing notebook sans output.
+        the demo into the existing notebook.
         '''
         import json
         js = self._js
@@ -528,6 +532,6 @@ def demo_example():
     print(_sum)
 
 # This lets the `demo(ipyext.demo)` find only the `demo_example`.
-# Only modues with that variable will display an overview of
+# Only modules with that variable will display an overview of
 # the available demos.
 __demos__ = [demo_example]
